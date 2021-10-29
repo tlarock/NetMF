@@ -107,6 +107,51 @@ def direct_compute_deepwalk_matrix(A, window, b):
     Y = f(M.todense().astype(theano.config.floatX))
     return sparse.csr_matrix(Y)
 
+def compute_S_paths(paths, N, window):
+    data = dict()
+    for path in paths:
+        for i in range(len(path)):
+            for j in range(i+1, i+window+1):
+                if j >= len(path):
+                    break
+                u = path[i]
+                v = path[j]
+                data.setdefault(j-i, dict())
+                data[j-i].setdefault((u,v), 0)
+                data[j-i][(u,v)] += 1
+
+    S = np.zeros((N,N))
+    node_mapping = dict()
+    idx = 0
+    for d, mat_dat in data.items():
+        curr = np.zeros((N,N))
+        for (u,v) in mat_dat:
+            if u not in node_mapping:
+                node_mapping[u] = idx
+                idx += 1
+            if v not in node_mapping:
+                node_mapping[v] = idx
+                idx += 1
+            curr[node_mapping[u], node_mapping[v]] += mat_dat[(u,v)]
+
+        S += curr
+
+    return S
+
+def direct_compute_seqwalk_matrix(A, window, b, paths):
+    # TODO: Their function uses the laplacian and I don't get why
+    n = A.shape[0]
+    vol = float(A.sum())
+    # Simple option: seq_walk_mat_k(paths, i) that returns an NxN 
+    # matrix where each entry is the total number of real paths that 
+    # started at i and ended at j
+    S = compute_S_paths(paths, n, window)
+    M = S * (vol) / ( window * b )
+    m = T.matrix()
+    f = theano.function([m], T.log(T.maximum(m, 1)))
+    Y = f(M.astype(theano.config.floatX))
+    return sparse.csr_matrix(Y)
+
 def netmf_small(args):
     logger.info("Running NetMF for a small window size...")
     logger.info("Window size is set to be %d", args.window)
