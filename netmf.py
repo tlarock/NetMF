@@ -3,7 +3,6 @@
 # File Name: eigen.py
 # Author: Jiezhong Qiu
 # Create Time: 2017/07/13 16:05
-# TODO:
 
 import scipy.io
 import scipy.sparse as sparse
@@ -11,12 +10,8 @@ from scipy.sparse import csgraph
 import numpy as np
 import argparse
 import logging
-import theano
-from theano import tensor as T
 
 logger = logging.getLogger(__name__)
-theano.config.exception_verbosity='high'
-
 
 def load_adjacency_matrix(file, variable_name="network"):
     data = scipy.io.loadmat(file)
@@ -48,6 +43,8 @@ def approximate_normalized_graph_laplacian(A, rank, which="LA"):
     return evals, D_rt_invU
 
 def approximate_deepwalk_matrix(evals, D_rt_invU, window, vol, b):
+    import theano
+    from theano import tensor as T
     evals = deepwalk_filter(evals, window=window)
     X = sparse.diags(np.sqrt(evals)).dot(D_rt_invU.T).T
     m = T.matrix()
@@ -88,6 +85,8 @@ def netmf_large(args):
 
 
 def direct_compute_deepwalk_matrix(A, window, b):
+    import theano
+    from theano import tensor as T
     n = A.shape[0]
     vol = float(A.sum())
     L, d_rt = csgraph.laplacian(A, normed=True, return_diag=True)
@@ -139,6 +138,8 @@ def compute_S_paths(paths, N, window):
     return S
 
 def direct_compute_seqwalk_matrix(A, window, b, paths):
+    import theano
+    from theano import tensor as T
     # TODO: Their function uses the laplacian and I don't get why
     n = A.shape[0]
     vol = float(A.sum())
@@ -151,6 +152,7 @@ def direct_compute_seqwalk_matrix(A, window, b, paths):
     f = theano.function([m], T.log(T.maximum(m, 1)))
     Y = f(M.astype(theano.config.floatX))
     return sparse.csr_matrix(Y)
+
 
 def netmf_small(args):
     logger.info("Running NetMF for a small window size...")
