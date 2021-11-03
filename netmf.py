@@ -43,14 +43,14 @@ def approximate_normalized_graph_laplacian(A, rank, which="LA"):
     return evals, D_rt_invU
 
 def approximate_deepwalk_matrix(evals, D_rt_invU, window, vol, b):
-    import theano
-    from theano import tensor as T
+    import aesara
+    from aesara import tensor as T
     evals = deepwalk_filter(evals, window=window)
     X = sparse.diags(np.sqrt(evals)).dot(D_rt_invU.T).T
     m = T.matrix()
     mmT = T.dot(m, m.T) * (vol/b)
-    f = theano.function([m], T.log(T.maximum(mmT, 1)))
-    Y = f(X.astype(theano.config.floatX))
+    f = aesara.function([m], T.log(T.maximum(mmT, 1)))
+    Y = f(X.astype(aesara.config.floatX))
     logger.info("Computed DeepWalk matrix with %d non-zero elements",
             np.count_nonzero(Y))
     return sparse.csr_matrix(Y)
@@ -85,8 +85,8 @@ def netmf_large(args):
 
 
 def direct_compute_deepwalk_matrix(A, window, b):
-    import theano
-    from theano import tensor as T
+    import aesara
+    from aesara import tensor as T
     n = A.shape[0]
     vol = float(A.sum())
     L, d_rt = csgraph.laplacian(A, normed=True, return_diag=True)
@@ -102,8 +102,8 @@ def direct_compute_deepwalk_matrix(A, window, b):
     D_rt_inv = sparse.diags(d_rt ** -1)
     M = D_rt_inv.dot(D_rt_inv.dot(S).T)
     m = T.matrix()
-    f = theano.function([m], T.log(T.maximum(m, 1)))
-    Y = f(M.todense().astype(theano.config.floatX))
+    f = aesara.function([m], T.log(T.maximum(m, 1)))
+    Y = f(M.todense().astype(aesara.config.floatX))
     return sparse.csr_matrix(Y)
 
 def compute_S_paths(paths, N, window):
@@ -138,8 +138,8 @@ def compute_S_paths(paths, N, window):
     return S
 
 def direct_compute_seqwalk_matrix(A, window, b, paths):
-    import theano
-    from theano import tensor as T
+    import aesara
+    from aesara import tensor as T
     # TODO: Their function uses the laplacian and I don't get why
     n = A.shape[0]
     vol = float(A.sum())
@@ -149,8 +149,8 @@ def direct_compute_seqwalk_matrix(A, window, b, paths):
     S = compute_S_paths(paths, n, window)
     M = S * (vol) / ( window * b )
     m = T.matrix()
-    f = theano.function([m], T.log(T.maximum(m, 1)))
-    Y = f(M.astype(theano.config.floatX))
+    f = aesara.function([m], T.log(T.maximum(m, 1)))
+    Y = f(M.astype(aesara.config.floatX))
     return sparse.csr_matrix(Y)
 
 
